@@ -1,3 +1,7 @@
+<!-- Chosen Palette: Slate & Slate Blue (Primary: #0f172a, Accent: #2563eb, Success: #10b981, Danger: #ef4444) -->
+<!-- Application Structure Plan: Single-card interactive calculator dashboard with mode switching for CDS Mathematics and GS/English exams. Speedometer gauge provides instant visual net score assessment, while breakdown progress bar and metric cards highlight accuracy, penalties, and attempts. Range sliders enforce a hard total question limit by clamping the active slider. -->
+<!-- Visualization & Content Choices: Dynamic CSS/JS Speedometer Gauge for score representation, segmented HTML/CSS bar for question distribution, interactive HTML range sliders with real-time total question clamping logic. Standard HTML/CSS with JS state management (NO SVG/Mermaid used). -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -297,13 +301,14 @@
         var posWeight = (examMode === 'math') ? 1.0 : (100 / 120);
         var negWeight = posWeight / 3;
 
+        // Prevent combined total from exceeding max limit by clamping the active slider
         if ((correct + wrong) > maxQ) {
             if (lastChanged === 'correct') {
-                wrong = maxQ - correct;
-                wSlider.value = wrong;
-            } else {
                 correct = maxQ - wrong;
                 cSlider.value = correct;
+            } else if (lastChanged === 'wrong') {
+                wrong = maxQ - correct;
+                wSlider.value = wrong;
             }
         }
 
