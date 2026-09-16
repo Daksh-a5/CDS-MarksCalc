@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDS Calculator Dashboard</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --neutral: #cbd5e1;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .calc-box {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 460px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        h2 {
+            color: var(--primary);
+            margin: 0 0 20px 0;
+            font-size: 1.5rem;
+        }
+        .mode-container {
+            display: flex;
+            background: #e2e8f0;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #475569;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .mode-btn.active {
+            background: var(--card);
+            color: var(--accent);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .speedometer-container {
+            position: relative;
+            width: 240px;
+            height: 140px;
+            margin: 0 auto 10px auto;
+            overflow: hidden;
+        }
+        .speedo-track {
+            width: 220px;
+            height: 220px;
+            border: 10px solid #e2e8f0;
+            border-radius: 50%;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            box-sizing: border-box;
+        }
+        .needle-pivot-point {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+        }
+        .speedo-needle {
+            position: absolute;
+            bottom: 0;
+            left: -3px;
+            width: 6px;
+            height: 95px;
+            background: var(--danger);
+            border-radius: 4px 4px 0 0;
+            transform-origin: bottom center;
+            transform: rotate(-90deg);
+            z-index: 3;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .needle-cap {
+            position: absolute;
+            bottom: -8px;
+            left: -8px;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border: 2px solid white;
+            border-radius: 50%;
+            z-index: 4;
+        }
+        .score-display-panel {
+            margin-bottom: 25px;
+        }
+        .score-digits {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+        .score-lbl {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .section-heading {
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 20px 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 4px;
+        }
+        .bar-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .lbl-c { color: var(--success); }
+        .lbl-w { color: var(--danger); }
+        .lbl-na { color: #64748b; }
+        .split-bar {
+            display: flex;
+            height: 18px;
+            background: #e2e8f0;
+            border-radius: 9px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .bar-seg {
+            height: 100%;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            line-height: 18px;
+            white-space: nowrap;
+            text-align: center;
+        }
+        .bar-seg.c { background: var(--success); width: 0%; }
+        .bar-seg.w { background: var(--danger); width: 0%; }
+        .bar-seg.na { background: var(--neutral); width: 100%; color: #475569; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            display: block;
+        }
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-top: 2px;
+            display: block;
+        }
+        .slider-wrapper {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .slider-info {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: #334155;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            outline: none;
+        }
+        .max-note {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 15px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="calc-box">
+    <h2 id="paperTitle">CDS Mathematics Calculator</h2>
+    <div class="mode-container">
+        <button type="button" class="mode-btn active" id="btnMath">Mathematics</button>
+        <button type="button" class="mode-btn" id="btnGs">GS + English</button>
+    </div>
+    <div class="speedometer-container">
+        <div class="speedo-track"></div>
+        <div class="needle-pivot-point">
+            <div class="speedo-needle" id="speedoNeedle"></div>
+            <div class="needle-cap"></div>
+        </div>
+    </div>
+    <div class="score-display-panel">
+        <div class="score-digits" id="netScore">0.0</div>
+        <div class="score-lbl">Net Marks</div>
+    </div>
+    <div class="section-heading">Question Distribution</div>
+    <div class="bar-label-row">
+        <span class="lbl-c">Correct: <span id="txtC">0</span></span>
+        <span class="lbl-w">Incorrect: <span id="txtW">0</span></span>
+        <span class="lbl-na">Not Attempted: <span id="txtNa">100</span></span>
+    </div>
+    <div class="split-bar">
+        <div class="bar-seg c" id="segC"></div>
+        <div class="bar-seg w" id="segW"></div>
+        <div class="bar-seg na" id="segNa">100</div>
+    </div>
+    <div class="section-heading">Performance Metrics</div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-label">Gross Marks</span>
+            <span class="stat-value" id="valGross" style="color: var(--success);">0.00</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Penalty</span>
+            <span class="stat-value" id="valPenalty" style="color: var(--danger);">0.00</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Accuracy Rate</span>
+            <span class="stat-value" id="valAccuracy">0%</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Attempted Questions</span>
+            <span class="stat-value" id="valAttempted">0</span>
+        </div>
+    </div>
+    <div class="slider-wrapper">
+        <div class="slider-info">
+            <span>Correct Answers</span>
+            <span id="badgeC" style="color: var(--success);">0</span>
+        </div>
+        <input type="range" id="slideC" min="0" max="100" value="0">
+    </div>
+    <div class="slider-wrapper">
+        <div class="slider-info">
+            <span>Wrong Answers</span>
+            <span id="badgeW" style="color: var(--danger);">0</span>
+        </div>
+        <input type="range" id="slideW" min="0" max="100" value="0">
+    </div>
+    <div class="max-note" id="totalQuestionsLabel">Total Paper Scale Limit: 100 Questions</div>
+</div>
+
+<script>
+(function() {
+    var examMode = 'math';
+    var cSlider = document.getElementById('slideC');
+    var wSlider = document.getElementById('slideW');
+    var btnMath = document.getElementById('btnMath');
+    var btnGs = document.getElementById('btnGs');
+
+    function runCalculation(lastChanged) {
+        var correct = parseInt(cSlider.value) || 0;
+        var wrong = parseInt(wSlider.value) || 0;
+        
+        var maxQ = (examMode === 'math') ? 100 : 120;
+        var posWeight = (examMode === 'math') ? 1.0 : (100 / 120);
+        var negWeight = posWeight / 3;
+
+        if ((correct + wrong) > maxQ) {
+            if (lastChanged === 'correct') {
+                wrong = maxQ - correct;
+                wSlider.value = wrong;
+            } else {
+                correct = maxQ - wrong;
+                cSlider.value = correct;
+            }
+        }
+
+        var attempted = correct + wrong;
+        var unattempted = maxQ - attempted;
+        
+        var grossMarks = correct * posWeight;
+        var penalty = wrong * negWeight;
+        var finalScore = grossMarks - penalty;
+        if (finalScore < 0) finalScore = 0;
+        var accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+
+        document.getElementById('badgeC').innerText = correct.toString();
+        document.getElementById('badgeW').innerText = wrong.toString();
+        document.getElementById('txtC').innerText = correct.toString();
+        document.getElementById('txtW').innerText = wrong.toString();
+        document.getElementById('txtNa').innerText = unattempted.toString();
+        document.getElementById('netScore').innerText = finalScore.toFixed(1);
+        document.getElementById('valGross').innerText = grossMarks.toFixed(2);
+        document.getElementById('valPenalty').innerText = penalty.toFixed(2);
+        document.getElementById('valAccuracy').innerText = accuracy + '%';
+        document.getElementById('valAttempted').innerText = attempted + ' / ' + maxQ;
+
+        var cPercent = (correct / maxQ) * 100;
+        var wPercent = (wrong / maxQ) * 100;
+        var naPercent = (unattempted / maxQ) * 100;
+
+        var sCElement = document.getElementById('segC');
+        var sWElement = document.getElementById('segW');
+        var sNaElement = document.getElementById('segNa');
+
+        sCElement.style.width = cPercent + '%';
+        sCElement.innerText = correct > 0 ? correct.toString() : '';
+        sWElement.style.width = wPercent + '%';
+        sWElement.innerText = wrong > 0 ? wrong.toString() : '';
+        sNaElement.style.width = naPercent + '%';
+        sNaElement.innerText = unattempted > 0 ? unattempted.toString() : '';
+
+        var degrees = (finalScore / 100) * 180 - 90;
+        document.getElementById('speedoNeedle').style.transform = 'rotate(' + degrees + 'deg)';
+    }
+
+    function switchMode(mode) {
+        examMode = mode;
+        if (mode === 'math') {
+            btnMath.className = 'mode-btn active';
+            btnGs.className = 'mode-btn';
+            document.getElementById('paperTitle').innerText = "CDS Mathematics Calculator";
+            document.getElementById('totalQuestionsLabel').innerText = "Total Paper Scale Limit: 100 Questions";
+            cSlider.max = 100;
+            wSlider.max = 100;
+        } else {
+            btnMath.className = 'mode-btn';
+            btnGs.className = 'mode-btn active';
+            document.getElementById('paperTitle').innerText = "CDS GS & English Calculator";
+            document.getElementById('totalQuestionsLabel').innerText = "Total Paper Scale Limit: 120 Questions (Per Paper)";
+            cSlider.max = 120;
+            wSlider.max = 120;
+        }
+        cSlider.value = 0;
+        wSlider.value = 0;
+        runCalculation('reset');
+    }
+
+    cSlider.addEventListener('input', function() { runCalculation('correct'); });
+    wSlider.addEventListener('input', function() { runCalculation('wrong'); });
+    btnMath.addEventListener('click', function() { switchMode('math'); });
+    btnGs.addEventListener('click', function() { switchMode('gs'); });
+
+    // Initial render
+    runCalculation('init');
+})();
+</script>
+</body>
+</html>
