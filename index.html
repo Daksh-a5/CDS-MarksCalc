@@ -1,6 +1,6 @@
 <!-- Chosen Palette: Slate & Slate Blue (Primary: #0f172a, Accent: #2563eb, Success: #10b981, Danger: #ef4444) -->
-<!-- Application Structure Plan: Single-card interactive calculator dashboard with mode switching for CDS Mathematics and GS/English exams. Speedometer gauge provides instant visual net score assessment, while breakdown progress bar and metric cards highlight accuracy, penalties, and attempts. Range sliders enforce a hard total question limit by clamping the active slider. -->
-<!-- Visualization & Content Choices: Dynamic CSS/JS Speedometer Gauge for score representation, segmented HTML/CSS bar for question distribution, interactive HTML range sliders with real-time total question clamping logic. Standard HTML/CSS with JS state management (NO SVG/Mermaid used). -->
+<!-- Application Structure Plan: Single-card interactive calculator dashboard with mode switching for CDS Mathematics and GS/English exams. Speedometer gauge provides instant visual net score assessment, while breakdown progress bar and metric cards highlight accuracy, penalties, and attempts. Range sliders feature real-time value clamping across input, change, and touch events to strictly freeze slider progression when paper limits are reached. -->
+<!-- Visualization & Content Choices: Dynamic CSS/JS Speedometer Gauge for score representation, segmented HTML/CSS bar for question distribution, interactive HTML range sliders with multi-event programmatic value locking (NO SVG/Mermaid used). -->
 <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 <!DOCTYPE html>
 <html lang="en">
@@ -18,13 +18,18 @@
             --bg: #f8fafc;
             --card: #ffffff;
         }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg);
             margin: 0;
             padding: 20px;
             display: flex;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
         .calc-box {
             background: var(--card);
@@ -33,7 +38,6 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             width: 100%;
             max-width: 460px;
-            box-sizing: border-box;
             text-align: center;
         }
         h2 {
@@ -58,6 +62,7 @@
             color: #475569;
             cursor: pointer;
             border-radius: 6px;
+            transition: all 0.2s ease;
         }
         .mode-btn.active {
             background: var(--card);
@@ -79,7 +84,6 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            box-sizing: border-box;
         }
         .needle-pivot-point {
             position: absolute;
@@ -162,6 +166,7 @@
             line-height: 18px;
             white-space: nowrap;
             text-align: center;
+            transition: width 0.15s ease;
         }
         .bar-seg.c { background: var(--success); width: 0%; }
         .bar-seg.w { background: var(--danger); width: 0%; }
@@ -210,6 +215,25 @@
             background: #e2e8f0;
             border-radius: 3px;
             outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: none;
         }
         .max-note {
             font-size: 0.8rem;
@@ -293,27 +317,36 @@
     var btnMath = document.getElementById('btnMath');
     var btnGs = document.getElementById('btnGs');
 
-    function runCalculation(lastChanged) {
-        var correct = parseInt(cSlider.value) || 0;
-        var wrong = parseInt(wSlider.value) || 0;
-        
-        var maxQ = (examMode === 'math') ? 100 : 120;
+    function getMaxQuestions() {
+        return (examMode === 'math') ? 100 : 120;
+    }
+
+    function handleSliderInput(activeSource) {
+        var maxQ = getMaxQuestions();
+        var correct = parseInt(cSlider.value, 10) || 0;
+        var wrong = parseInt(wSlider.value, 10) || 0;
+
+        // Hard lock: If sum exceeds total max questions, forcefully clamp the active slider
+        if ((correct + wrong) > maxQ) {
+            if (activeSource === 'c') {
+                cSlider.value = Math.max(0, maxQ - wrong);
+            } else if (activeSource === 'w') {
+                wSlider.value = Math.max(0, maxQ - correct);
+            }
+        }
+        runCalculation();
+    }
+
+    function runCalculation() {
+        var maxQ = getMaxQuestions();
+        var correct = parseInt(cSlider.value, 10) || 0;
+        var wrong = parseInt(wSlider.value, 10) || 0;
+
         var posWeight = (examMode === 'math') ? 1.0 : (100 / 120);
         var negWeight = posWeight / 3;
 
-        // Prevent combined total from exceeding max limit by clamping the active slider
-        if ((correct + wrong) > maxQ) {
-            if (lastChanged === 'correct') {
-                correct = maxQ - wrong;
-                cSlider.value = correct;
-            } else if (lastChanged === 'wrong') {
-                wrong = maxQ - correct;
-                wSlider.value = wrong;
-            }
-        }
-
         var attempted = correct + wrong;
-        var unattempted = maxQ - attempted;
+        var unattempted = Math.max(0, maxQ - attempted);
         
         var grossMarks = correct * posWeight;
         var penalty = wrong * negWeight;
@@ -353,33 +386,37 @@
 
     function switchMode(mode) {
         examMode = mode;
+        var maxQ = getMaxQuestions();
+        cSlider.max = maxQ;
+        wSlider.max = maxQ;
+        cSlider.value = 0;
+        wSlider.value = 0;
+
         if (mode === 'math') {
             btnMath.className = 'mode-btn active';
             btnGs.className = 'mode-btn';
             document.getElementById('paperTitle').innerText = "CDS Mathematics Calculator";
             document.getElementById('totalQuestionsLabel').innerText = "Total Paper Scale Limit: 100 Questions";
-            cSlider.max = 100;
-            wSlider.max = 100;
         } else {
             btnMath.className = 'mode-btn';
             btnGs.className = 'mode-btn active';
             document.getElementById('paperTitle').innerText = "CDS GS & English Calculator";
             document.getElementById('totalQuestionsLabel').innerText = "Total Paper Scale Limit: 120 Questions (Per Paper)";
-            cSlider.max = 120;
-            wSlider.max = 120;
         }
-        cSlider.value = 0;
-        wSlider.value = 0;
-        runCalculation('reset');
+        runCalculation();
     }
 
-    cSlider.addEventListener('input', function() { runCalculation('correct'); });
-    wSlider.addEventListener('input', function() { runCalculation('wrong'); });
+    // Attach listeners across input, change, and touchmove events for seamless mobile/desktop physical clamping
+    ['input', 'change', 'touchmove'].forEach(function(evtType) {
+        cSlider.addEventListener(evtType, function() { handleSliderInput('c'); });
+        wSlider.addEventListener(evtType, function() { handleSliderInput('w'); });
+    });
+
     btnMath.addEventListener('click', function() { switchMode('math'); });
     btnGs.addEventListener('click', function() { switchMode('gs'); });
 
     // Initial render
-    runCalculation('init');
+    switchMode('math');
 })();
 </script>
 </body>
